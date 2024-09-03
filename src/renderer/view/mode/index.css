@@ -7,7 +7,7 @@
   border-radius: var(--radius);
 }
 
-.mode_link {
+.done {
   display: block;
   width: 96px;
   height: 36px;
@@ -16,14 +16,14 @@
   text-align: center;
   text-decoration: none;
   border-radius: calc(var(--radius) - 2px);
+  background: none;
+  border: none;
+}
 
-  &.is-current {
-    cursor: default;
-    background: var(--surface-1);
-  }
+.done:hover {
+  background: var(--surface-1);
+}
 
-  &:not(.is-current) {
-    position: relative;
-    z-index: 2;
-  }
+.done:active {
+  background: none;
 }

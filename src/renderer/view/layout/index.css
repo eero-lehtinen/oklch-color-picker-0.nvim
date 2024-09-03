@@ -11,13 +11,12 @@
 
   @media (width < 830px) {
     grid-template:
-      "title"
-      "L"
-      "C"
-      "H"
-      "extra"
-      "prefs"
-      "links";
+      'title'
+      'L'
+      'C'
+      'H'
+      'extra'
+      'prefs';
     padding-bottom: 450px;
 
     :is(body.is-main-collapsed) & {
@@ -27,23 +26,19 @@
 
   @media (width >= 830px) and (width < 1230px) {
     grid-template:
-      "title title"
-      "main  links"
-      "main  prefs"
-      "main  ."
-      "L     C"
-      "extra H";
-    padding-bottom: 28px;
+      'title title'
+      'main  C'
+      'L     H'
+      'extra prefs';
+    /* padding-bottom: 28px; */
   }
 
   @media (width >= 1230px) {
     grid-template:
-      "title title title"
-      "main  L     C"
-      "main  extra H"
-      "links extra H"
-      "prefs extra H"
-      "prefs extra .";
+      'title title title'
+      'main  L     C'
+      'prefs extra H'
+      'prefs extra H';
   }
 
   @media (width >= 1230px) and (width < 1320px) {

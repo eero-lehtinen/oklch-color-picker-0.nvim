@@ -10,8 +10,8 @@
   "main": "./out/main/main.js",
   "scripts": {
     "dev": "electron-vite dev -w",
-    "start": "vite",
-    "build": "vite build -m production",
+    "start": "electron-vite preview",
+    "build": "electron-vite build",
     "clean": "rm -Rf ./dist/",
     "build:lch": "LCH=1 vite build -m production && ./lch.sh",
     "test:types": "tsc --noEmit",
@@ -22,6 +22,8 @@
   },
   "dependencies": {
     "@csstools/postcss-oklab-function": "^4.0.2",
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/utils": "^3.0.0",
     "@nanostores/persistent": "^0.10.2",
     "autoprefixer": "^10.4.20",
     "culori": "^4.0.1",
@@ -46,6 +48,7 @@
     "@types/delaunator": "^5.0.3",
     "@types/three": "^0.167.2",
     "electron": "^32.0.1",
+    "electron-builder": "^25.0.5",
     "electron-vite": "^2.3.0",
     "eslint": "^9.9.1",
     "nano-staged": "^0.8.0",
