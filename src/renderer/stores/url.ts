@@ -1,7 +1,5 @@
 import { atom, computed } from 'nanostores'
 
-import { trackEvent } from '../view/analytics/index.js'
-
 export type Urls = '3d' | 'bench' | 'main'
 
 export let url = atom<Urls>('main')
@@ -37,10 +35,4 @@ url.listen(value => {
     '',
     location.pathname + (value === 'main' ? '' : `?${value}`) + location.hash
   )
-})
-
-url.subscribe(value => {
-  if (value === '3d') {
-    trackEvent('Start 3D fullscreen')
-  }
 })

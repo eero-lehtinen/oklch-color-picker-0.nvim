@@ -1,5 +1,3 @@
-import { trackEvent } from '../analytics/index.js'
-
 const THRESHOLD = 100
 
 let main = document.querySelector<HTMLElement>('.main')!
@@ -73,12 +71,3 @@ mobile.addEventListener('change', init)
 expand.addEventListener('click', () => {
   changeExpanded(!isExpanded)
 })
-
-for (let link of links) {
-  let event = 'Open Evil Martians'
-  if (link.href.includes('sitnik')) event = 'Open Sitnik page'
-  if (link.href.includes('romanshamin')) event = 'Open Shamin page'
-  link.addEventListener('click', () => {
-    trackEvent(event)
-  })
-}
