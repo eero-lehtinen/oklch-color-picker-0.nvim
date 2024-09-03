@@ -27,3 +27,24 @@
 .done:active {
   background: none;
 }
+
+.field_hotkey2 {
+  position: absolute;
+  inset-inline-start: 128px;
+  bottom: 44px;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 16px;
+  color: var(--text-note);
+  text-align: center;
+  text-transform: uppercase;
+  border: 1px solid var(--text-note);
+  border-bottom-width: 2px;
+  border-radius: 2px;
+
+  @media (width < 830px) {
+    display: none;
+  }
+}

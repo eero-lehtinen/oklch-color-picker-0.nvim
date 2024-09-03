@@ -3,6 +3,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   doneButton.addEventListener('click', () => {
     window.electron.ipcRenderer.send('close')
-    console.log('close')
+  })
+
+  window.addEventListener('keydown', e => {
+    if (e.key === 'd') {
+      doneButton.click()
+    }
   })
 })
