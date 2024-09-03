@@ -15,11 +15,9 @@ import './view/sample/index.js'
 import './view/settings/index.js'
 import './view/link/index.js'
 
-function init(): void {
-  window.addEventListener('DOMContentLoaded', () => {
-    doAThing()
-  })
-}
+window.addEventListener('DOMContentLoaded', () => {
+  doAThing()
+})
 
 function doAThing(): void {
   const versions = window.electron.process.versions
@@ -39,5 +37,3 @@ function replaceText(selector: string, text: string): void {
     element.innerText = text
   }
 }
-
-init()

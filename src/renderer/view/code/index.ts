@@ -129,8 +129,10 @@ function listenChanges(input: HTMLInputElement): void {
   })
 }
 
-listenChanges(lchInput)
-listenChanges(rgbInput)
+window.addEventListener('DOMContentLoaded', () => {
+  listenChanges(lchInput)
+  listenChanges(rgbInput)
+})
 
 outputFormat.subscribe(value => {
   format.value = value
