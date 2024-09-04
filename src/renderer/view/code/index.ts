@@ -67,6 +67,9 @@ function setRgb(): void {
 }
 
 current.subscribe(() => {
+  console.log('Sending color to nvim', rgbInput.value)
+  window.electron.ipcRenderer.send('update-color', rgbInput.value)
+
   if (!locked.get(lchInput)) {
     setLch()
   }
@@ -159,4 +162,11 @@ formats.subscribe(value => {
       option.text = value[type]
     }
   }
+})
+
+window.electron.ipcRenderer.on('nvim-color', (e, data) => {
+  console.log('nvim-color', e, data)
+  outputFormat.set('hex')
+  rgbInput.value = data
+  rgbInput.dispatchEvent(new Event('change'))
 })

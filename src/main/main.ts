@@ -1,7 +1,37 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { electronApp, optimizer, is, platform } from '@electron-toolkit/utils'
+import { connect } from 'node:net'
+
 // import icon from '../../resources/icon.png?asset'
+//
+
+const NAME = 'oklch-picker-nvim'
+
+let pipeName = platform.isWindows ? `\\\\.\\pipe\\${NAME}` : `/tmp/${NAME}`
+
+let pageReady = false
+let nvimColor: string | null = null
+let outputColor: string | null = null
+
+let sendNvimColor: ((color: string) => void) | null = null
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+let socket = connect(pipeName, () => {
+  console.log('Connected to nvim')
+
+  socket.on('data', data => {
+    outputColor = null
+    console.log('Got data:', data.toString())
+    if (sendNvimColor) {
+      console.log('Sending color to renderer1', nvimColor)
+      sendNvimColor(data.toString())
+    } else {
+      nvimColor = data.toString()
+    }
+  })
+})
 
 function createWindow(): void {
   // Create the browser window.
@@ -21,9 +51,36 @@ function createWindow(): void {
     mainWindow.show()
   })
 
+  mainWindow.webContents.on('did-finish-load', () => {
+    pageReady = true
+    sendNvimColor = (color: string) => {
+      mainWindow.webContents.send('nvim-color', color)
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+      }
+      mainWindow.focus()
+    }
+
+    if (nvimColor) {
+      console.log('Sending color to renderer2', nvimColor)
+      sendNvimColor(nvimColor)
+      nvimColor = null
+    }
+  })
+
   mainWindow.webContents.setWindowOpenHandler(details => {
     shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+
+  ipcMain.on('finish', () => {
+    socket.write(outputColor ?? 'EMPTY')
+    mainWindow.minimize()
+  })
+
+  ipcMain.on('update-color', (_, data) => {
+    console.log('update-color', data)
+    outputColor = data.toString()
   })
 
   // HMR for renderer base on electron-vite cli.
@@ -48,17 +105,11 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window, {
       zoom: true,
-      escToCloseWindow: true
+      escToCloseWindow: false
     })
   })
 
   console.log(app.getPath('userData'))
-
-  // IPC test
-  // ipcMain.on('ping', () => console.log('pong'))
-  ipcMain.on('close', () => {
-    app.quit()
-  })
 
   createWindow()
 
