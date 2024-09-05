@@ -2,7 +2,6 @@ local M = {}
 
 M.default_opts = {
   use_tray = true,
-  timeout_secs = 4,
   log_level = vim.log.levels.INFO,
 }
 
@@ -56,7 +55,7 @@ local function connect_to_app(start_time)
     app_started = false
   end
 
-  if vim.loop.hrtime() - start_time > M.config.timeout_secs * 1000000000 then
+  if vim.loop.hrtime() - start_time > 4 * 1000000000 then
     log("OKLCH color picker timed out", vim.log.levels.ERROR)
     return
   end
