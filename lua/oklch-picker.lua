@@ -182,6 +182,8 @@ function M.pick_color_under_cursor()
   end
 end
 
+vim.api.nvim_create_user_command("ColorPickOklch", M.pick_color_under_cursor, {})
+
 vim.api.nvim_create_autocmd("VimLeavePre", {
   callback = function()
     if pipe and not pipe:is_closing() then
