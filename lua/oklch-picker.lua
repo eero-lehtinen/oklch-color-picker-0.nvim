@@ -28,6 +28,11 @@ local function log(msg, level)
   end
 end
 
+local function script_path()
+  local str = debug.getinfo(2, "S").source:sub(2)
+  return str:match("(.*/)")
+end
+
 function M.start_app()
   if app_started then
     return
@@ -45,7 +50,7 @@ function M.start_app()
   uv.spawn(cmd, {
     args = args,
     -- stdio = { stdin, stdout, stderr },
-    -- cwd = "~/repos/oklch-picker",
+    cwd = script_path() .. "..",
   }, function(_, _) end)
 end
 
