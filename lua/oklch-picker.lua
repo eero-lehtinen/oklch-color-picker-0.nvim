@@ -14,7 +14,7 @@ local uv = vim.uv
 local name = "oklch-picker.nvim"
 local pipe_name = vim.loop.os_uname().sysname == "Windows" and "\\\\.\\pipe\\" .. name or "/tmp/" .. name .. ".sock"
 
-local pipe = uv.new_pipe(false)
+local pipe = nil
 local connected = false
 local pending = nil
 
@@ -173,6 +173,7 @@ function M.pick_color_under_cursor()
 
     if connected then
       log("Send color " .. pending.color, vim.log.levels.DEBUG)
+      assert(pipe, "pipe is nil")
       pipe:write(pending.color, function(err)
         if err then
           log("OKLCH color picker send error: " .. err, vim.log.levels.ERROR)
