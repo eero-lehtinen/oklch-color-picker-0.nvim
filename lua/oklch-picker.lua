@@ -32,6 +32,7 @@ function M.start_app()
   if M.config.use_tray then
     table.insert(args, "--tray")
   end
+  table.insert(args, "--ozone-platform-hint=auto")
 
   uv.spawn(cmd, {
     args = args,
