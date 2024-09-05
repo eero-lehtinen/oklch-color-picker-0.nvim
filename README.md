@@ -1,7 +1,7 @@
 # OKLCH Color Picker (for Neovim)
 
 Forked from https://github.com/evilmartians/oklch-picker,
-stuffed into an electron app, and added a companion Neovim plugin.
+stuffed into an electron app, and modified into a Neovim plugin.
 
 ![Screenshot_20240906_010725](https://github.com/user-attachments/assets/81dd8d08-1c3a-499e-931e-774dc1d8461c)
 
