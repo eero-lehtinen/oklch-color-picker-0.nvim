@@ -3,7 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is, platform } from '@electron-toolkit/utils'
 import net from 'node:net'
 
-const NAME = 'oklch-picker-nvim'
+const NAME = 'oklch-picker.nvim'
 
 let useTray = process.argv.includes('--tray')
 let tray: Tray | null = null

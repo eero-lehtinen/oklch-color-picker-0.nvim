@@ -3,6 +3,7 @@ local M = {}
 M.default_opts = {
   use_tray = true,
   timeout_secs = 4,
+  log_level = vim.log.levels.INFO,
 }
 
 function M.setup(config)
@@ -11,7 +12,7 @@ end
 
 local uv = vim.uv
 
-local name = "oklch-picker-nvim"
+local name = "oklch-picker.nvim"
 local pipe_name = vim.loop.os_uname().sysname == "Windows" and "\\\\.\\pipe\\" .. name or "/tmp/" .. name .. ".sock"
 
 local pipe = uv.new_pipe(false)
@@ -19,6 +20,14 @@ local connected = false
 local pending = nil
 
 local app_started = false
+
+local function log(msg, level)
+  if level >= M.config.log_level then
+    vim.schedule(function()
+      vim.notify(msg, level)
+    end)
+  end
+end
 
 function M.start_app()
   if app_started then
@@ -38,10 +47,7 @@ function M.start_app()
     args = args,
     -- stdio = { stdin, stdout, stderr },
     -- cwd = "~/repos/oklch-picker",
-  }, function(code, signal)
-    -- print("exit code", code)
-    -- print("exit signal", signal)
-  end)
+  }, function(_, _) end)
 end
 
 local function connect_to_app(start_time)
@@ -51,7 +57,7 @@ local function connect_to_app(start_time)
   end
 
   if vim.loop.hrtime() - start_time > M.config.timeout_secs * 1000000000 then
-    vim.notify("OKLCH color picker timed out", vim.log.levels.ERROR)
+    log("OKLCH color picker timed out", vim.log.levels.ERROR)
     return
   end
 
@@ -63,9 +69,7 @@ local function connect_to_app(start_time)
 
   local _, err_name, err_message = pipe:connect(pipe_name, function(connect_err)
     if connect_err then
-      vim.schedule(function()
-        vim.notify("OKLCH couldn't connect: " .. connect_err, vim.log.levels.DEBUG)
-      end)
+      log("OKLCH couldn't connect: " .. connect_err, vim.log.levels.DEBUG)
 
       M.start_app()
 
@@ -79,31 +83,23 @@ local function connect_to_app(start_time)
 
     connected = true
 
-    vim.schedule(function()
-      vim.notify("OKLCH connected", vim.log.levels.DEBUG)
-    end)
+    log("OKLCH connected", vim.log.levels.DEBUG)
 
     if pending then
-      vim.schedule(function()
-        vim.notify("OKLCH sending color: " .. pending.color, vim.log.levels.DEBUG)
-      end)
+      log("OKLCH sending color: " .. pending.color, vim.log.levels.DEBUG)
       pipe:write(pending.color, function(err)
         if err then
-          vim.schedule(function()
-            vim.notify("OKLCH write error: " .. err, vim.log.levels.ERROR)
-          end)
+          log("OKLCH send error: " .. err, vim.log.levels.ERROR)
         end
       end)
     end
 
     pipe:read_start(function(err, data)
       if err then
-        vim.schedule(function()
-          vim.notify("OKLCH read error: " .. err, vim.log.levels.ERROR)
-        end)
+        log("OKLCH receive error: " .. err, vim.log.levels.ERROR)
       elseif data then
         if data ~= "EMPTY" then
-          print("Got data: " .. data)
+          log("Got data: " .. data, vim.log.levels.DEBUG)
           if pending then
             vim.schedule(function()
               vim.api.nvim_buf_set_text(
@@ -119,16 +115,14 @@ local function connect_to_app(start_time)
           end
         end
       else
-        vim.schedule(function()
-          vim.notify("OKLCH disconnected", vim.log.levels.DEBUG)
-        end)
+        log("OKLCH disconnected", vim.log.levels.DEBUG)
         pipe:close()
         connected = false
       end
     end)
   end)
   if err_name then
-    vim.notify("OKLCH failed to start connection" .. err_name .. " " .. err_message, vim.log.levels.ERROR)
+    log("OKLCH failed to start connection" .. err_name .. " " .. err_message, vim.log.levels.ERROR)
   end
 end
 
@@ -151,7 +145,7 @@ local function find_hex_color(line, cursor_col)
   return nil, nil
 end
 
-local function pick_color_under_cursor()
+function M.pick_color_under_cursor()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local line_number = cursor_pos[1]
   local cursor_col = cursor_pos[2] + 1
@@ -164,7 +158,7 @@ local function pick_color_under_cursor()
   local pos, color = find_hex_color(line, cursor_col)
 
   if pos and color then
-    print("Found color at position " .. vim.inspect(pos) .. " with color " .. color)
+    log("Found color at position " .. vim.inspect(pos) .. " with color " .. color, vim.log.levels.DEBUG)
     pending = {
       bufnr = bufnr,
       line_number = line_number,
@@ -174,25 +168,19 @@ local function pick_color_under_cursor()
     }
 
     if connected then
-      vim.schedule(function()
-        vim.notify("Send color " .. pending.color, vim.log.levels.DEBUG)
-      end)
+      log("Send color " .. pending.color, vim.log.levels.DEBUG)
       pipe:write(pending.color, function(err)
         if err then
-          vim.schedule(function()
-            vim.notify("OKLCH color picker write error: " .. err, vim.log.levels.ERROR)
-          end)
+          log("OKLCH color picker send error: " .. err, vim.log.levels.ERROR)
         end
       end)
     else
       connect_to_app()
     end
   else
-    print("No color under cursor")
+    log("No color under cursor", vim.log.levels.INFO)
   end
 end
-
-vim.api.nvim_create_user_command("ReplaceColorUnderCursor", pick_color_under_cursor, {})
 
 vim.api.nvim_create_autocmd("VimLeavePre", {
   callback = function()
