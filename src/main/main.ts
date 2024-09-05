@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, Tray, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is, platform } from '@electron-toolkit/utils'
 import net from 'node:net'
+import fs from 'node:fs'
 
 const NAME = 'oklch-picker.nvim'
 
@@ -15,6 +16,10 @@ let nvimSocket: net.Socket | null = null
 let outputColor: string | null = null
 
 let sendNvimColor: ((color: string) => void) | null = null
+
+if (fs.existsSync(pipeName)) {
+  fs.unlinkSync(pipeName)
+}
 
 let server = net.createServer(socket => {
   console.log('Client connected')
