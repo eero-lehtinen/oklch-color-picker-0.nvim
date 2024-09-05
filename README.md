@@ -1,43 +1,40 @@
-# OKLCH & LCH Color Picker
+# OKLCH & LCH Color Picker (for Neovim)
 
-Color picker and converter for OKLCH and LCH color space.
+Forked from [https://github.com/evilmartians/oklch-picker] ([`oklch.com`](https://oklch.com)),
+packaged into an electron app and integrated into Neovim for easy color picking.
 
-- [`oklch.com`](https://oklch.com)
-- [`lch.oklch.com`](https://lch.oklch.com)
+## Features
 
-OKLCH is a new way to encode colors (like hex, RGBA, or HSL):
+- Choose a color from your buffer and edit it in a graphical editor
+- Works only with hex colors for now (e.g. `#RRGGBB`, short form and alpha also supported)
+- Picker uses OKLCH colorspace (motivation: [The article by Oklab creator](https://bottosson.github.io/posts/oklab/))
+- Blazing fast <sub>Note: Satisfaction not guaranteed. The first launch takes 2-5 seconds. After the first use it's only hidden to avoid subsequent slow startups. The plugin uses sockets to tell the app when to start the next picking. Memory usage is _only_ about 1.5G. The same window can be used for multiple Neovim instances.</sub>
 
-- OKLCH has native browser support.
-- It can encode more colors for modern screens (P3, Rec. 2020, and beyond).
-- [Unlike HSL], OKLCH always has predictable contrast
-  after color transformation.
-- In contrast [with LCH and Lab], no [hue shift] on chroma changes.
-- Provides great accessibility on palette generation.
+[brenoprata10/nvim-highlight-colors](https://github.com/brenoprata10/nvim-highlight-colors) is a good companion for this plugin.
 
-Additional links about Oklab and OKLCH:
+## Installation
 
-- [OKLCH in CSS: why we moved from RGB and HSL](https://evilmartians.com/chronicles/oklch-in-css-why-quit-rgb-hsl)
-- [The article by Oklab creator](https://bottosson.github.io/posts/oklab/)
+Node.js and npm are required.
 
-[Unlike HSL]: https://wildbit.com/blog/accessible-palette-stop-using-hsl-for-color-systems
-[with LCH and Lab]: https://bottosson.github.io/posts/oklab/#blending-colors
-[hue shift]: https://lch.oklch.com/#35,55,297,100
+[lazy.nvim](https://github.com/folke/lazy.nvim)
 
-## Development
+```lua
+{
+  'eero-lehtinen/oklch-picker',
+  build = 'npm install && npm run build',
+  opts = {},
+},
+```
 
-To run a local copy for development:
+Use `:ColorPickOklch` to pick a color under cursor, or call `require('oklch-picker').pick_color_under_cursor()` from Lua. Keymaps you have to setup yourself.
 
-1. Install Node.js and `pnpm`.
-2. Install dependencies:
+## Default Options
 
-   ```sh
-   pnpm install
-   ```
-
-3. Run local server:
-
-   ```sh
-   pnpm start
-   ```
-
-We recommend installing Prettier and EditorConfig plugins to your text editor.
+```lua
+{
+  -- Minimize to tray after usage (set to false to minimize to taskbar)
+  use_tray = true,
+  -- What level of notifications to emit
+  log_level = vim.log.levels.INFO,
+}
+```
