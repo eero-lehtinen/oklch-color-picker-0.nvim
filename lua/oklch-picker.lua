@@ -36,8 +36,8 @@ function M.start_app()
 
   app_started = true
 
-  local cmd = "npx"
-  local args = { "electron", "out/main/main.js" }
+  local cmd = "./node_modules/electron/dist/electron"
+  local args = { "." }
   if M.config.use_tray then
     table.insert(args, "--tray")
   end
