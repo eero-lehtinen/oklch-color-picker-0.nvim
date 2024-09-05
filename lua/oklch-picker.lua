@@ -1,105 +1,105 @@
 local M = {}
 
-function M.setup() end
+M.default_opts = {
+  use_tray = true,
+  timeout_secs = 4,
+}
 
-local nio = require("nio")
+function M.setup(config)
+  M.config = vim.tbl_deep_extend("force", M.default_opts, config or {})
+end
 
--- app.stdin:write("ping\n")
---
 local uv = vim.uv
 
--- let pipeName = platform.isWindows ? `\\\\.\\pipe\\${NAME}` : `/tmp/${NAME}`
---
---
 local name = "oklch-picker-nvim"
-local pipe_name = vim.loop.os_uname().sysname == "Windows" and "\\\\.\\pipe\\" .. name or "/tmp/" .. name
+local pipe_name = vim.loop.os_uname().sysname == "Windows" and "\\\\.\\pipe\\" .. name or "/tmp/" .. name .. ".sock"
 
 local pipe = uv.new_pipe(false)
-pipe:bind(pipe_name)
-
-local client = nil
+local connected = false
 local pending = nil
 
--- Function to detect all hex color codes in a line and their positions
-local function find_hex_color(line, cursor_col)
-  -- Patterns for hex colors with different formats
-  local patterns = {
-    "#%x%x%x%x%x%x%x%x", -- #RRGGBBAA
-    "#%x%x%x%x%x%x", -- #RRGGBB
-    "#%x%x%x%x", -- #RGBA
-    "#%x%x%x", -- #RGB
-  }
+local app_started = false
 
-  -- Iterate over each pattern and find all matches
-  for _, pattern in ipairs(patterns) do
-    for start_pos, end_pos in line:gmatch("()" .. pattern .. "()") do
-      -- Check if the cursor is within the match
-      if cursor_col >= start_pos and cursor_col <= end_pos - 1 then
-        return { start_pos, end_pos - 1 }, line:sub(start_pos, end_pos - 1)
-      end
-    end
+function M.start_app()
+  if app_started then
+    return
   end
 
-  return nil, nil
-end
+  app_started = true
 
--- Function to find and possibly select a hex color code if the cursor is over it
-local function find_color_under_cursor()
-  local cursor_pos = vim.api.nvim_win_get_cursor(0)
-  local line_number = cursor_pos[1]
-  local cursor_col = cursor_pos[2] + 1 -- Convert to 1-based index
-
-  local bufnr = vim.api.nvim_get_current_buf()
-
-  local line = vim.api.nvim_buf_get_lines(bufnr, line_number - 1, line_number, false)[1]
-
-  -- TODO: use nvim-color-thing-thing to parse
-  local pos, color = find_hex_color(line, cursor_col)
-
-  if pos then
-    print("Found color at position " .. vim.inspect(pos) .. " with color " .. color)
-    pending = {
-      bufnr = bufnr,
-      line_number = line_number,
-      start = pos[1],
-      finish = pos[2],
-      color = color,
-    }
-
-    if not client then
-      M.start_picker()
-    else
-      client:write(color)
-    end
+  local cmd = "npx"
+  local args = { "electron", "out/main/main.js" }
+  if M.config.use_tray then
+    table.insert(args, "--tray")
   end
-end
 
--- Command to test the function
-vim.api.nvim_create_user_command("FindColorUnderCursor", find_color_under_cursor, {})
-
-function M.start_picker()
-  uv.spawn("npx", {
-    args = { "electron", "out/main/main.js" },
+  uv.spawn(cmd, {
+    args = args,
+    -- stdio = { stdin, stdout, stderr },
     -- cwd = "~/repos/oklch-picker",
   }, function(code, signal)
     -- print("exit code", code)
     -- print("exit signal", signal)
   end)
+end
 
-  pipe:listen(128, function(err)
-    assert(not err, err)
+local function connect_to_app(start_time)
+  if not start_time then
+    start_time = vim.loop.hrtime()
+    app_started = false
+  end
 
-    client = uv.new_pipe(false)
-    pipe:accept(client)
+  if vim.loop.hrtime() - start_time > M.config.timeout_secs * 1000000000 then
+    vim.notify("OKLCH color picker timed out", vim.log.levels.ERROR)
+    return
+  end
 
-    print("Client connected")
+  if connected then
+    return
+  end
 
-    assert(pending)
-    client:write(pending.color)
+  pipe = uv.new_pipe(false)
 
-    client:read_start(function(err, data)
+  local _, err_name, err_message = pipe:connect(pipe_name, function(connect_err)
+    if connect_err then
+      vim.schedule(function()
+        vim.notify("OKLCH couldn't connect: " .. connect_err, vim.log.levels.DEBUG)
+      end)
+
+      M.start_app()
+
+      uv.sleep(20)
+      vim.schedule(function()
+        connect_to_app(start_time)
+      end)
+
+      return
+    end
+
+    connected = true
+
+    vim.schedule(function()
+      vim.notify("OKLCH connected", vim.log.levels.DEBUG)
+    end)
+
+    if pending then
+      vim.schedule(function()
+        vim.notify("OKLCH sending color: " .. pending.color, vim.log.levels.DEBUG)
+      end)
+      pipe:write(pending.color, function(err)
+        if err then
+          vim.schedule(function()
+            vim.notify("OKLCH write error: " .. err, vim.log.levels.ERROR)
+          end)
+        end
+      end)
+    end
+
+    pipe:read_start(function(err, data)
       if err then
-        print(err)
+        vim.schedule(function()
+          vim.notify("OKLCH read error: " .. err, vim.log.levels.ERROR)
+        end)
       elseif data then
         if data ~= "EMPTY" then
           print("Got data: " .. data)
@@ -118,17 +118,86 @@ function M.start_picker()
           end
         end
       else
-        print("Client disconnected")
-        client:close()
-        client = nil
+        vim.schedule(function()
+          vim.notify("OKLCH disconnected", vim.log.levels.DEBUG)
+        end)
+        pipe:close()
+        connected = false
       end
     end)
   end)
+  if err_name then
+    vim.notify("OKLCH failed to start connection" .. err_name .. " " .. err_message, vim.log.levels.ERROR)
+  end
 end
+
+local function find_hex_color(line, cursor_col)
+  local patterns = {
+    "#%x%x%x%x%x%x%x%x", -- #RRGGBBAA
+    "#%x%x%x%x%x%x", -- #RRGGBB
+    "#%x%x%x%x", -- #RGBA
+    "#%x%x%x", -- #RGB
+  }
+
+  for _, pattern in ipairs(patterns) do
+    for start_pos, end_pos in line:gmatch("()" .. pattern .. "()") do
+      if cursor_col >= start_pos and cursor_col <= end_pos - 1 then
+        return { start_pos, end_pos - 1 }, line:sub(start_pos, end_pos - 1)
+      end
+    end
+  end
+
+  return nil, nil
+end
+
+local function pick_color_under_cursor()
+  local cursor_pos = vim.api.nvim_win_get_cursor(0)
+  local line_number = cursor_pos[1]
+  local cursor_col = cursor_pos[2] + 1
+
+  local bufnr = vim.api.nvim_get_current_buf()
+
+  local line = vim.api.nvim_buf_get_lines(bufnr, line_number - 1, line_number, false)[1]
+
+  -- TODO: use nvim-color-thing-thing to parse
+  local pos, color = find_hex_color(line, cursor_col)
+
+  if pos and color then
+    print("Found color at position " .. vim.inspect(pos) .. " with color " .. color)
+    pending = {
+      bufnr = bufnr,
+      line_number = line_number,
+      start = pos[1],
+      finish = pos[2],
+      color = color,
+    }
+
+    if connected then
+      vim.schedule(function()
+        vim.notify("Send color " .. pending.color, vim.log.levels.DEBUG)
+      end)
+      pipe:write(pending.color, function(err)
+        if err then
+          vim.schedule(function()
+            vim.notify("OKLCH color picker write error: " .. err, vim.log.levels.ERROR)
+          end)
+        end
+      end)
+    else
+      connect_to_app()
+    end
+  else
+    print("No color under cursor")
+  end
+end
+
+vim.api.nvim_create_user_command("ReplaceColorUnderCursor", pick_color_under_cursor, {})
 
 vim.api.nvim_create_autocmd("VimLeavePre", {
   callback = function()
-    pipe:close()
+    if pipe and not pipe:is_closing() then
+      pipe:close()
+    end
   end,
 })
 

@@ -1,37 +1,40 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is, platform } from '@electron-toolkit/utils'
-import { connect } from 'node:net'
-
-// import icon from '../../resources/icon.png?asset'
-//
+import net from 'node:net'
 
 const NAME = 'oklch-picker-nvim'
 
-let pipeName = platform.isWindows ? `\\\\.\\pipe\\${NAME}` : `/tmp/${NAME}`
+let useTray = process.argv.includes('--tray')
+let tray: Tray | null = null
 
-let pageReady = false
+let pipeName = platform.isWindows ? `\\\\.\\pipe\\${NAME}` : `/tmp/${NAME}.sock`
+
 let nvimColor: string | null = null
+let nvimSocket: net.Socket | null = null
 let outputColor: string | null = null
 
 let sendNvimColor: ((color: string) => void) | null = null
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-
-let socket = connect(pipeName, () => {
-  console.log('Connected to nvim')
+let server = net.createServer(socket => {
+  console.log('Client connected')
 
   socket.on('data', data => {
-    outputColor = null
     console.log('Got data:', data.toString())
+    nvimSocket = socket
+    nvimColor = data.toString()
     if (sendNvimColor) {
-      console.log('Sending color to renderer1', nvimColor)
+      console.log('Sending color to renderer', nvimColor)
       sendNvimColor(data.toString())
-    } else {
-      nvimColor = data.toString()
     }
   })
+
+  socket.on('error', error => {
+    console.log('Client error', error)
+  })
 })
+
+server.listen(pipeName)
 
 function createWindow(): void {
   // Create the browser window.
@@ -40,7 +43,7 @@ function createWindow(): void {
     height: 800,
     show: false,
     autoHideMenuBar: true,
-    // ...(process.platform === 'linux' ? { icon } : {}),
+    icon: join(__dirname, '../renderer/oklch-192.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/preload.mjs'),
       sandbox: false
@@ -52,18 +55,19 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.on('did-finish-load', () => {
-    pageReady = true
     sendNvimColor = (color: string) => {
       mainWindow.webContents.send('nvim-color', color)
-      if (mainWindow.isMinimized()) {
+      if (useTray) {
+        mainWindow.show()
+      } else {
         mainWindow.restore()
       }
-      mainWindow.focus()
     }
 
+    console.log('Did finish load', nvimColor)
     if (nvimColor) {
       console.log('Sending color to renderer2', nvimColor)
-      sendNvimColor(nvimColor)
+      sendNvimColor!(nvimColor!)
       nvimColor = null
     }
   })
@@ -74,14 +78,35 @@ function createWindow(): void {
   })
 
   ipcMain.on('finish', () => {
-    socket.write(outputColor ?? 'EMPTY')
-    mainWindow.minimize()
+    if (!nvimSocket) {
+      console.log('No socket to send result')
+      return
+    }
+    nvimSocket.write(outputColor ?? 'EMPTY')
+    if (useTray) {
+      mainWindow.hide()
+    } else {
+      mainWindow.minimize()
+    }
   })
 
   ipcMain.on('update-color', (_, data) => {
     console.log('update-color', data)
-    outputColor = data.toString()
+    if (data.trim() !== '') {
+      outputColor = data.toString()
+    }
   })
+
+  if (useTray) {
+    tray = new Tray(join(__dirname, '../renderer/oklch-192.png'))
+    const contextMenu = Menu.buildFromTemplate([
+      { label: 'Show', click: () => mainWindow.show() },
+      { label: 'Quit', click: () => app.quit() }
+    ])
+    tray.setToolTip('OKLCH Color Picker')
+    tray.setContextMenu(contextMenu)
+    tray.on('click', () => mainWindow.show())
+  }
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
@@ -92,9 +117,6 @@ function createWindow(): void {
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('asd.oklch.picker')
