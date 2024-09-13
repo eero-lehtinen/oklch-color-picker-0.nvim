@@ -30,7 +30,7 @@ Node.js and npm are required.
 },
 ```
 
-Use `:ColorPickOklch` to pick a color under cursor, or call
+Use `:ColorPickOklch0` to pick a color under cursor, or call
 
 ```lua
 require('oklch-color-picker-0').pick_color_under_cursor()

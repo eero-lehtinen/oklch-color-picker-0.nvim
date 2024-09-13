@@ -188,7 +188,7 @@ function M.pick_color_under_cursor()
   end
 end
 
-vim.api.nvim_create_user_command("ColorPickOklch", M.pick_color_under_cursor, {})
+vim.api.nvim_create_user_command("ColorPickOklch0", M.pick_color_under_cursor, {})
 
 vim.api.nvim_create_autocmd("VimLeavePre", {
   callback = function()
