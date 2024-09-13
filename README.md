@@ -24,20 +24,22 @@ Node.js and npm are required.
 
 ```lua
 {
-  'eero-lehtinen/oklch-picker',
+  'eero-lehtinen/oklch-color-picker-0.nvim',
   build = 'npm install && npm run build',
   opts = {},
 },
 ```
 
-Use `:ColorPickOklch` to pick a color under cursor, or call 
+Use `:ColorPickOklch` to pick a color under cursor, or call
+
 ```lua
-require('oklch-picker').pick_color_under_cursor()
+require('oklch-color-picker-0').pick_color_under_cursor()
 ```
 
-Keymaps you have to setup yourself, e.g. 
+Keymaps you have to setup yourself, e.g.
+
 ```lua
-vim.keymap.set('n', '<leader>p', require('oklch-picker').pick_color_under_cursor)
+vim.keymap.set('n', '<leader>p', require('oklch-color-picker-0').pick_color_under_cursor)
 ```
 
 ## Default Options
@@ -52,5 +54,6 @@ vim.keymap.set('n', '<leader>p', require('oklch-picker').pick_color_under_cursor
 ```
 
 ## Other similar plugins
+
 - [KabbAmine/vCoolor.vim](https://github.com/KabbAmine/vCoolor.vim)
 - [ziontee113/color-picker.nvim](https://github.com/ziontee113/color-picker.nvim)
